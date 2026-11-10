@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sistem Tally Pipa - Mode Otomatis & Manual User</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #tallyCanvas {
+            max-width: 100%;
+            height: auto;
+            touch-action: none;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+    <header class="border-b border-slate-800 bg-slate-900/90 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <span class="w-3.5 h-3.5 rounded-full bg-cyan-500 animate-pulse"></span>
+            <h1 class="text-sm font-bold tracking-wider uppercase text-slate-200">
+                Sistem Tally Pipa • Mode Otomatis & Manual User
+            </h1>
+        </div>
+        <div class="flex items-center gap-3 text-xs font-mono">
+            <span class="text-slate-400">Mode:</span>
+            <span id="modeBadge" class="bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1 rounded font-bold">
+                UNGGAH FOTO DULU
+            </span>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Kolom Kiri: Canvas dan Kontrol -->
+        <div class="lg:col-span-2 space-y-4">
+            <!-- 2 TOMBOL UTAMA -->
+            <div class="grid grid-cols-2 gap-3">
+                <button id="btnAutoCV" disabled class="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-bold text-sm bg-slate-800 text-slate-500 border border-slate-700 transition disabled:opacity-40 shadow-lg">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    <span>1. Dihitung Otomatis (CV)</span>
+                </button>
+                <button id="btnManualMode" disabled class="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-bold text-sm bg-slate-800 text-slate-500 border border-slate-700 transition disabled:opacity-40 shadow-lg">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+                    <span>2. User Hitung Sendiri (Klik Manual)</span>
+                </button>
+            </div>
+
+            <!-- Toolbar Crop Kotak Opsional -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                    <button id="btnToggleCrop" class="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 px-3 py-1.5 rounded font-semibold transition">
+                        📦 Tarik Kotak Area (Opsional)
+                    </button>
+                    <button id="btnClearBox" class="bg-slate-800 hover:bg-slate-700 text-slate-400 px-2.5 py-1.5 rounded border border-slate-700 transition">
+                        ✕ Batal Kotak
+                    </button>
+                </div>
+                <span id="statusGuide" class="text-slate-400 font-mono">Pilih foto pipa di bawah</span>
+            </div>
+
+            <!-- Area Kanvas -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-xl">
+                <div class="relative w-full bg-black rounded-lg overflow-hidden flex items-center justify-center border border-slate-800 min-h-[460px]">
+                    <canvas id="tallyCanvas"></canvas>
+                    <div id="noFeedMsg" class="absolute text-slate-500 text-xs font-mono text-center p-6">
+                        Belum ada foto yang dipilih.
+                    </div>
+                </div>
+
+                <!-- Kontrol Titik Manual & Undo -->
+                <div class="mt-3 flex items-center justify-between text-xs px-1">
+                    <div class="flex items-center gap-2">
+                        <button id="btnUndo" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded border border-slate-700 transition">
+                            ↩ Undo Nomor Terakhir
+                        </button>
+                        <button id="btnClear" class="bg-slate-800 hover:bg-red-950 hover:text-red-300 text-slate-300 px-3 py-1.5 rounded border border-slate-700 transition">
+                            ✕ Hapus Semua Nomor
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-slate-400">Ukuran Nomor:</label>
+                        <input type="range" id="badgeSlider" min="50" max="150" value="100" class="w-24 accent-cyan-500 cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload File -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-cyan-400 block">Pilih Foto Pipa</span>
+                    <span class="text-[11px] text-slate-500">Unggah foto bundel dari galeri HP atau PC.</span>
+                </div>
+                <input type="file" id="imageInput" accept="image/*" class="text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-cyan-600 file:text-white hover:file:bg-cyan-500 cursor-pointer">
+            </div>
+        </div>
+
+        <!-- Kolom Kanan: Rekapitulasi -->
+        <div class="space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg text-center">
+                <div class="text-xs text-slate-400 uppercase tracking-widest font-mono">Jumlah Pipa Terhitung</div>
+                <div id="pipeCounter" class="text-7xl font-black text-cyan-400 mt-2 font-mono">0</div>
+                <div id="subStatus" class="text-xs text-slate-500 mt-2 font-mono">Siap Menghitung</div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block">Petunjuk Penggunaan:</span>
+                
+                <div class="text-xs space-y-2.5 text-slate-300">
+                    <div class="p-3 bg-emerald-950/40 rounded border border-emerald-900/60">
+                        <b class="text-emerald-400 block mb-1">Cara Hitung Sendiri (Manual):</b>
+                        1. Klik tombol hijau <b>"2. User Hitung Sendiri"</b>.<br>
+                        2. Arahkan mouse / sentuh jari ke setiap lubang pipa.<br>
+                        3. Nomor <b>1, 2, 3...</b> langsung menempel pas di lubang pipa.<br>
+                        4. Klik kanan (atau tahan jari) untuk menghapus nomor yang salah.
+                    </div>
+
+                    <div class="p-3 bg-cyan-950/40 rounded border border-cyan-900/60">
+                        <b class="text-cyan-400 block mb-1">Cara Dihitung Otomatis:</b>
+                        Klik tombol biru <b>"1. Dihitung Otomatis"</b> jika ingin komputer menandai semua pipa secara otomatis terlebih dahulu.
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 space-y-2">
+                    <button id="btnDownload" class="w-full text-xs bg-slate-800 hover:bg-slate-700 text-cyan-300 py-2.5 rounded font-semibold border border-slate-700 transition">
+                        📷 Unduh Foto Beranotasi (.JPG)
+                    </button>
+                    <button id="btnExport" class="w-full text-xs bg-slate-800 hover:bg-slate-700 text-emerald-300 py-2.5 rounded font-semibold border border-slate-700 transition">
+                        📊 Ekspor Rekap (.CSV)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('tallyCanvas');
+        const ctx = canvas.getContext('2d');
+        const noFeedMsg = document.getElementById('noFeedMsg');
+        const pipeCounter = document.getElementById('pipeCounter');
+        const modeBadge = document.getElementById('modeBadge');
+        const statusGuide = document.getElementById('statusGuide');
+        const subStatus = document.getElementById('subStatus');
+
+        const btnAutoCV = document.getElementById('btnAutoCV');
+        const btnManualMode = document.getElementById('btnManualMode');
+        const btnToggleCrop = document.getElementById('btnToggleCrop');
+        const btnClearBox = document.getElementById('btnClearBox');
+        const btnUndo = document.getElementById('btnUndo');
+        const btnClear = document.getElementById('btnClear');
+        const badgeSlider = document.getElementById('badgeSlider');
+
+        let rawImage = new Image();
+        let currentFile = null;
+        let pipes = []; // Array of {x, y, r}
+        let activeMode = "MANUAL"; // "MANUAL", "AUTO", atau "CROP_BOX"
+        let cropBox = null;
+        let isBoxDragging = false;
+        let dragStart = {x: 0, y: 0};
+        let defaultRadius = 25;
+
+        badgeSlider.oninput = () => renderCanvas();
+
+        function renderCanvas() {
+            if (!rawImage.src) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(rawImage, 0, 0);
+
+            // 1. Gambar Kotak Seleksi jika aktif
+            if (cropBox && cropBox.w > 10 && cropBox.h > 10) {
+                ctx.save();
+                ctx.strokeStyle = "#f59e0b";
+                ctx.lineWidth = 3;
+                ctx.setLineDash([6, 6]);
+                ctx.strokeRect(cropBox.x, cropBox.y, cropBox.w, cropBox.h);
+                ctx.restore();
+            }
+
+            // 2. Gambar Nomor Pipa Terurut
+            const scale = parseInt(badgeSlider.value) / 100.0;
+            const badgeR = Math.max(11, Math.floor(defaultRadius * 0.45 * scale));
+
+            pipes.forEach((p, idx) => {
+                // Lingkaran luar lubang pipa
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r || defaultRadius, 0, 2 * Math.PI);
+                ctx.strokeStyle = activeMode === "AUTO" ? "#00e5ff" : "#10b981";
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+
+                // Bulatan badge nomor
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, badgeR, 0, 2 * Math.PI);
+                ctx.fillStyle = activeMode === "AUTO" ? "#0f172a" : "#064e3b";
+                ctx.fill();
+                ctx.strokeStyle = activeMode === "AUTO" ? "#00e5ff" : "#34d399";
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Angka nomor 1, 2, 3...
+                ctx.fillStyle = "#ffffff";
+                ctx.font = `bold ${Math.floor(badgeR * 0.95)}px sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(idx + 1, p.x, p.y + 1);
+            });
+
+            pipeCounter.textContent = pipes.length;
+        }
+
+        // Upload Foto
+        document.getElementById('imageInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            currentFile = file;
+
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch('/api/upload-raw', { method: 'POST', body: fd });
+            const data = await res.json();
+
+            rawImage.onload = () => {
+                canvas.width = rawImage.width;
+                canvas.height = rawImage.height;
+                noFeedMsg.classList.add('hidden');
+                pipes = [];
+                cropBox = null;
+
+                // Aktifkan kedua tombol
+                btnAutoCV.disabled = false;
+                btnManualMode.disabled = false;
+                btnAutoCV.className = "flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-bold text-sm bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700 cursor-pointer transition shadow-lg";
+                btnManualMode.className = "flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-bold text-sm bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 cursor-pointer transition shadow-lg";
+
+                // Langsung aktifkan Mode Hitung Manual User
+                setMode("MANUAL");
+            };
+            rawImage.src = data.raw_image;
+        });
+
+        function setMode(mode) {
+            activeMode = mode;
+            if (mode === "MANUAL") {
+                modeBadge.textContent = "USER HITUNG SENDIRI (MANUAL)";
+                modeBadge.className = "bg-emerald-950 text-emerald-300 border border-emerald-800 px-3 py-1 rounded font-bold font-mono";
+                statusGuide.textContent = "Klik lubang pipa untuk meletakkan nomor 1..N";
+                subStatus.textContent = "Mode Input Manual";
+            } else if (mode === "AUTO") {
+                modeBadge.textContent = "MODE OTOMATIS (CV)";
+                modeBadge.className = "bg-cyan-950 text-cyan-300 border border-cyan-800 px-3 py-1 rounded font-bold font-mono";
+                statusGuide.textContent = "Pipa terhitung otomatis. Klik untuk menambah.";
+                subStatus.textContent = "Terhitung Otomatis";
+            } else if (mode === "CROP_BOX") {
+                modeBadge.textContent = "MODE TARIK KOTAK AREA";
+                modeBadge.className = "bg-amber-950 text-amber-300 border border-amber-800 px-3 py-1 rounded font-bold font-mono";
+                statusGuide.textContent = "Tarik kotak di atas kumpulan pipa.";
+            }
+            renderCanvas();
+        }
+
+        // Konversi koordinat kursor ke kanvas
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: Math.round((clientX - rect.left) * scaleX),
+                y: Math.round((clientY - rect.top) * scaleY)
+            };
+        }
+
+        // EVENT KLIK / SENTUH KANVAS
+        function onPointerDown(e) {
+            if (!rawImage.src) return;
+            const pos = getPos(e);
+
+            if (activeMode === "CROP_BOX") {
+                isBoxDragging = true;
+                dragStart = pos;
+                cropBox = { x: pos.x, y: pos.y, w: 0, h: 0 };
+            } else {
+                // Mode Hitung (Manual maupun Auto): Klik Kiri = Tambah nomor di lubang pipa
+                pipes.push({ x: pos.x, y: pos.y, r: defaultRadius });
+                renderCanvas();
+            }
+        }
+
+        function onPointerMove(e) {
+            if (!isBoxDragging || activeMode !== "CROP_BOX") return;
+            const pos = getPos(e);
+            cropBox.x = Math.min(dragStart.x, pos.x);
+            cropBox.y = Math.min(dragStart.y, pos.y);
+            cropBox.w = Math.abs(pos.x - dragStart.x);
+            cropBox.h = Math.abs(pos.y - dragStart.y);
+            renderCanvas();
+        }
+
+        function onPointerUp() {
+            if (isBoxDragging && activeMode === "CROP_BOX") {
+                isBoxDragging = false;
+                setMode("MANUAL");
+            }
+        }
+
+        canvas.addEventListener('mousedown', onPointerDown);
+        canvas.addEventListener('mousemove', onPointerMove);
+        window.addEventListener('mouseup', onPointerUp);
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); onPointerDown(e); }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); onPointerMove(e); }, { passive: false });
+        window.addEventListener('touchend', onPointerUp);
+
+        // KLIK KANAN: HAPUS NOMOR YANG SALAH
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (pipes.length === 0) return;
+            const pos = getPos(e);
+            pipes = pipes.filter(p => Math.hypot(p.x - pos.x, p.y - pos.y) > defaultRadius * 0.85);
+            renderCanvas();
+        });
+
+        // Tombol 2: Mode Hitung Manual (User Sendiri)
+        btnManualMode.addEventListener('click', () => {
+            pipes = []; // Bersihkan kanvas agar user hitung sendiri
+            setMode("MANUAL");
+        });
+
+        // Tombol 1: Eksekusi Deteksi Otomatis
+        btnAutoCV.addEventListener('click', async () => {
+            if (!currentFile) return;
+            btnAutoCV.textContent = "Memindai...";
+            btnAutoCV.disabled = true;
+
+            const fd = new FormData();
+            fd.append('file', currentFile);
+            if (cropBox && cropBox.w > 30) {
+                fd.append('crop_box', JSON.stringify(cropBox));
+            }
+
+            try {
+                const res = await fetch('/api/process-cv', { method: 'POST', body: fd });
+                const data = await res.json();
+                pipes = data.circles;
+                defaultRadius = data.dominant_radius || 25;
+                setMode("AUTO");
+            } catch (err) {
+                alert("Gagal memproses perhitungan otomatis.");
+            } finally {
+                btnAutoCV.innerHTML = `<svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> <span>1. Dihitung Otomatis (CV)</span>`;
+                btnAutoCV.disabled = false;
+            }
+        });
+
+        // Toggle Tarik Kotak
+        btnToggleCrop.addEventListener('click', () => setMode("CROP_BOX"));
+        btnClearBox.addEventListener('click', () => {
+            cropBox = null;
+            renderCanvas();
+        });
+
+        // Undo & Clear
+        btnUndo.addEventListener('click', () => {
+            if (pipes.length > 0) {
+                pipes.pop();
+                renderCanvas();
+            }
+        });
+
+        btnClear.addEventListener('click', () => {
+            if (confirm("Hapus semua nomor dari kanvas?")) {
+                pipes = [];
+                renderCanvas();
+            }
+        });
+
+        // Unduh Foto
+        document.getElementById('btnDownload').addEventListener('click', () => {
+            if (!rawImage.src) return alert("Pilih foto terlebih dahulu!");
+            const a = document.createElement('a');
+            a.download = `tally_pipa_${Date.now()}.jpg`;
+            a.href = canvas.toDataURL('image/jpeg', 0.95);
+            a.click();
+        });
+
+        // Ekspor CSV
+        document.getElementById('btnExport').addEventListener('click', () => {
+            if (pipes.length === 0) return alert("Belum ada pipa yang dihitung!");
+            let csv = "Nomor,X,Y\n";
+            pipes.forEach((p, i) => csv += `${i + 1},${p.x},${p.y}\n`);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `rekap_pipa_${Date.now()}.csv`;
+            a.click();
+        });
+    </script>
+</body>
+</html>
